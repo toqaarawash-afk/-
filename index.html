@@ -1,0 +1,168 @@
+import React, { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'motion/react';
+import { Flower, Users, MapPin, Mic2, Home, Menu, X } from 'lucide-react';
+import { auth } from '../firebase';
+import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
+import { useTheme } from '../context/ThemeContext';
+
+interface Props {
+  children: React.ReactNode;
+}
+
+export default function Layout({ children }: Props) {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [user, setUser] = useState(auth.currentUser);
+  const location = useLocation();
+  const { flowerColor } = useTheme();
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleLogin = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (error) {
+      console.error('Login error:', error);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
+  const navItems = [
+    { name: '«·—∆Ì”Ì…', path: '/', icon: Home },
+    { name: '—›Ìﬁ… «·œ—»', path: '/rafiqat', icon: Users },
+    { name: 'Ê—œ Êÿ»Ì⁄…', path: '/ward', icon: MapPin },
+    { name: 'Â„”« ', path: '/hamasaat', icon: Mic2 },
+  ];
+
+  return (
+    <div className="min-h-screen bg-brick-dark text-beige-light font-sans selection:bg-beige-light selection:text-brick-dark transition-colors duration-1000">
+      {/* Navigation */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-brick-dark/80 backdrop-blur-md border-b border-white/10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-16 items-center">
+            <Link to="/" className="flex items-center gap-2 group">
+              <div className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center group-hover:bg-white/20 transition-colors">
+                <Flower className="text-rose-400 w-6 h-6" />
+              </div>
+              <span className="text-xl font-serif font-bold text-beige-light">’ıÕ˙»Û… «·ÊÛ—˙œ</span>
+            </Link>
+
+            {/* Desktop Nav */}
+            <div className="hidden md:flex items-center gap-8">
+              {navItems.map((item) => (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  style={{ color: location.pathname === item.path && flowerColor !== '#F5E6D3' ? flowerColor : undefined }}
+                  className={`flex items-center gap-2 text-sm font-medium transition-colors hover:opacity-80 ${
+                    location.pathname === item.path ? (flowerColor === '#F5E6D3' ? 'text-rose-400' : '') : 'text-beige-light/70'
+                  }`}
+                >
+                  <item.icon className="w-4 h-4" />
+                  {item.name}
+                </Link>
+              ))}
+              {user ? (
+                <div className="flex items-center gap-4">
+                  <img src={user.photoURL || ''} alt="" className="w-8 h-8 rounded-full border border-white/20" referrerPolicy="no-referrer" />
+                  <button onClick={handleLogout} className="text-sm font-medium text-beige-light/50 hover:text-rose-400">Œ—ÊÃ</button>
+                </div>
+              ) : (
+                <button
+                  onClick={handleLogin}
+                  style={{ backgroundColor: flowerColor !== '#F5E6D3' ? flowerColor : undefined }}
+                  className={`${flowerColor === '#F5E6D3' ? 'bg-beige-light text-brick-dark' : 'text-white'} px-6 py-2 rounded-full text-sm font-medium hover:opacity-90 transition-colors shadow-lg`}
+                >
+                  œŒÊ·
+                </button>
+              )}
+            </div>
+
+            {/* Mobile Menu Button */}
+            <button className="md:hidden p-2 text-beige-light" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+              {isMenuOpen ? <X /> : <Menu />}
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile Nav */}
+        <AnimatePresence>
+          {isMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="md:hidden bg-brick-dark border-t border-white/10 overflow-hidden"
+            >
+              <div className="px-4 py-6 space-y-4">
+                {navItems.map((item) => (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex items-center gap-4 text-lg font-medium text-beige-light/80 hover:text-rose-400"
+                  >
+                    <item.icon className="w-6 h-6" />
+                    {item.name}
+                  </Link>
+                ))}
+                {!user && (
+                  <button
+                    onClick={handleLogin}
+                    className="w-full bg-beige-light text-brick-dark py-3 rounded-2xl font-medium"
+                  >
+                    œŒÊ·
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </nav>
+
+      {/* Main Content */}
+      <main className="pt-20 pb-12">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={location.pathname}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.3 }}
+          >
+            {children}
+          </motion.div>
+        </AnimatePresence>
+      </main>
+
+      {/* Footer */}
+      <footer className="bg-brick-dark border-t border-white/10 py-12">
+        <div className="max-w-7xl mx-auto px-4 text-center">
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <Flower className="text-rose-400 w-5 h-5" />
+            <span className="text-lg font-serif font-bold text-beige-light">’ıÕ˙»Û… «·ÊÛ—˙œ</span>
+          </div>
+          <p className="text-beige-light/50 text-sm max-w-md mx-auto leading-relaxed">
+            „”«Õ… ¬„‰… ··«— ﬁ«¡ »«·—ÊÕ° Ê«· √„· ›Ì Ã„«· Œ·ﬁ «··Â° Ê«·»ÕÀ ⁄‰ «·’Õ»… «·’«·Õ… «· Ì  ⁄Ì‰ ⁄·Ï «·ŒÌ—.
+          </p>
+          <div className="mt-8 pt-8 border-t border-white/5 text-beige-light/30 text-xs">
+            © {new Date().getFullYear()} ’ıÕ˙»Û… «·ÊÛ—˙œ. Ã„Ì⁄ «·ÕﬁÊﬁ „Õ›ÊŸ….
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
